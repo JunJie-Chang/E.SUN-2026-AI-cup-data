@@ -15,15 +15,18 @@
 ├── src/
 │   ├── eda_market_profile.py          # 可重跑的市場環境分析腳本（price_volume.csv，seaborn圖表）
 │   ├── eda_rev_prof_net.py            # 可重跑的缺失值/極值分析腳本（rev_prof_net.csv）
-│   └── eda_q3_earnings_event_study.py # 可重跑的Q3財報公布事件研究腳本（兩資料集合併）
+│   ├── eda_q3_earnings_event_study.py # 可重跑的Q3財報公布事件研究腳本（兩資料集合併）
+│   └── eda_fomc_event_study.py        # 可重跑的FOMC利率決策事件研究腳本
 └── analysis/
-    ├── figures/                       # 分析圖表 PNG（01-12市場環境、13-14財報資料品質、15-16財報事件研究）
+    ├── figures/                       # 分析圖表 PNG（01-12市場環境、13-14財報資料品質、15-16財報事件研究、17 FOMC事件研究）
     ├── run_output.txt                 # eda_market_profile.py 執行輸出
     ├── run_output_rev_prof_net.txt    # eda_rev_prof_net.py 執行輸出
     ├── run_output_q3_event_study.txt  # eda_q3_earnings_event_study.py 執行輸出
+    ├── run_output_fomc_event_study.txt # eda_fomc_event_study.py 執行輸出
     ├── summary.md                     # price_volume.csv 市場環境分析摘要
     ├── rev_prof_net_summary.md        # rev_prof_net.csv 缺失值/極值分析摘要
-    └── q3_earnings_event_study_summary.md  # Q3財報公布對股價影響摘要
+    ├── q3_earnings_event_study_summary.md  # Q3財報公布對股價影響摘要
+    └── fomc_event_study_summary.md    # FOMC利率決策對股價影響摘要（與Q3財報比較）
 ```
 
 腳本（`src/`）都是相對於 repo 根目錄讀寫路徑，請從 repo 根目錄執行（例：`python3 src/eda_market_profile.py`），輸出圖表與文字摘要固定寫到 `analysis/`。
@@ -107,3 +110,20 @@ python3 src/eda_q3_earnings_event_study.py
 1. 用截止日(11/14)當市場層級錨點看，全市場報酬分歧度/成交量在截止日附近只溫和放大(約1.02-1.05倍)，沒有單日劇烈尖峰；成交量在截止日後1-2週有漸進式墊高（約day+12見高點）。
 2. 個股層級上，Q3盈餘YoY成長率(合併總損益)與後續30個交易日累積報酬有清楚正向關係：最佳分位比最差分位在事件窗內多賺約8個百分點（1,968個公司-年觀察值，2008-2025年）。
 3. 但這個價差大部分在截止日**之前**就已形成（推測來自月營收提前反應），截止日**之後**的增量漂移較小且中段分位排序不夠穩健——只有頭尾兩端(最佳/最差)方向性可信賴，且這是18年歷史平均型態，不保證2026年重演。
+
+## FOMC利率決策對股價的影響（`analysis/`）
+
+比賽視窗還涵蓋 2026/10/27-28 FOMC會議（決策公布換算台灣時間是10/29凌晨，比Q3財報截止日還早）。這裡用同一套event study方法論比較FOMC決策日 vs Q3財報截止日的市場反應，FOMC會議日期直接爬 federalreserve.gov 官方歷史頁面(regex解析，非AI摘要)取得，2008-2025年共143次例行會議，比財報截止日近似錨點精確得多。
+
+重跑分析：
+
+```bash
+python3 src/eda_fomc_event_study.py
+```
+
+會把1張圖存到 `analysis/figures/`（17）。文字摘要見 `analysis/fomc_event_study_summary.md`。
+
+**三個重點結論**：
+1. FOMC決策日對「市場整體方向性幅度」(150檔等權重代理指數|報酬|)有明顯放大效果(1.16倍，且day0剛好是±15交易日窗口裡的最高點)，Q3財報截止日則沒有這個效果(0.92倍，甚至略降)。
+2. 反過來，兩者對「個股間分歧度」的放大幅度差不多都很溫和(FOMC 1.03倍 vs 財報1.05倍)——FOMC是系統性總體衝擊，讓大家同時同方向動；財報是個股異質性事件，理論上該拉開分歧但訊號被稀釋。
+3. 分析過程中發現 `price_volume.csv` 已知的還原權值單日跳動雜訊(2014-07-15、2022-02-15)會嚴重扭曲用平均數(mean)算出的event study結果，已改用中位數(median)重新驗證兩份event study。
