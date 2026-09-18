@@ -7,20 +7,30 @@
 ```
 .
 ├── data/
-│   └── price_volume.csv       # 2000-01-04~至今，台股價量資料（還原權值），619MB，走 Git LFS
+│   ├── price_volume.csv        # 2000-01-04~至今，台股價量資料（還原權值），619MB，走 Git LFS
+│   └── rev_prof_net.csv        # 2005Q2~至今，各公司季營收/營益/稅前淨利，8.5MB，走 Git LFS
 ├── rules/
 │   ├── AI CUP 2026玉山人工智慧公開挑戰賽_比賽辦法.pdf   # 完整競賽辦法
 │   └── 玉山挑戰賽_投資組合及交易標的_150檔清單_v1.pdf     # 固定150檔投資池清單（100上市+50上櫃）
+├── src/
+│   ├── eda_market_profile.py          # 可重跑的市場環境分析腳本（price_volume.csv，seaborn圖表）
+│   ├── eda_rev_prof_net.py            # 可重跑的缺失值/極值分析腳本（rev_prof_net.csv）
+│   └── eda_q3_earnings_event_study.py # 可重跑的Q3財報公布事件研究腳本（兩資料集合併）
 └── analysis/
-    ├── eda_market_profile.py  # 可重跑的市場環境分析腳本（seaborn圖表）
-    ├── figures/                # 12張分析圖表 PNG
-    ├── run_output.txt          # 腳本執行時印出的關鍵統計數字
-    └── summary.md              # 分析結果文字摘要（給隊友快速消化用）
+    ├── figures/                       # 分析圖表 PNG（01-12市場環境、13-14財報資料品質、15-16財報事件研究）
+    ├── run_output.txt                 # eda_market_profile.py 執行輸出
+    ├── run_output_rev_prof_net.txt    # eda_rev_prof_net.py 執行輸出
+    ├── run_output_q3_event_study.txt  # eda_q3_earnings_event_study.py 執行輸出
+    ├── summary.md                     # price_volume.csv 市場環境分析摘要
+    ├── rev_prof_net_summary.md        # rev_prof_net.csv 缺失值/極值分析摘要
+    └── q3_earnings_event_study_summary.md  # Q3財報公布對股價影響摘要
 ```
+
+腳本（`src/`）都是相對於 repo 根目錄讀寫路徑，請從 repo 根目錄執行（例：`python3 src/eda_market_profile.py`），輸出圖表與文字摘要固定寫到 `analysis/`。
 
 ## Clone 這個 repo
 
-`data/price_volume.csv` 是用 **Git LFS** 追蹤的（原檔619MB，超過GitHub單檔100MB上限）。Clone之前務必先裝好 git-lfs，不然拿到的 CSV 會是一個幾百bytes的指標檔文字，不是真正的資料：
+`data/` 底下的 CSV（`price_volume.csv`、`rev_prof_net.csv`）都是用 **Git LFS** 追蹤的（`.gitattributes` 設定 `data/*.csv` 一律走 LFS，`price_volume.csv` 原檔619MB超過GitHub單檔100MB上限是主因）。Clone之前務必先裝好 git-lfs，不然拿到的 CSV 會是幾百bytes的指標檔文字，不是真正的資料：
 
 ```bash
 # 先裝 git-lfs（一次性）
@@ -30,7 +40,7 @@ git lfs install
 git clone https://github.com/JunJie-Chang/E.SUN-2026-AI-cup-data.git
 ```
 
-如果 clone 完發現 `data/price_volume.csv` 只有幾百 bytes，代表 git-lfs 沒裝好，執行 `git lfs pull` 補抓即可。
+如果 clone 完發現 `data/*.csv` 只有幾百 bytes，代表 git-lfs 沒裝好，執行 `git lfs pull` 補抓即可。
 
 ## 比賽核心限制（詳見 `rules/`）
 
@@ -44,6 +54,8 @@ git clone https://github.com/JunJie-Chang/E.SUN-2026-AI-cup-data.git
 
 `data/price_volume.csv`：欄位為 公司簡稱／名稱／年月日／開高低收盤價／成交量(千股)／TSE產業_名稱，1,976檔個股（含全部150檔比賽池），2000-01-04至今，還原權值價格。已完成的資料品質檢查：無缺失值/重複值，已知的異常包含少數OHLC微小誤差、3081聯亞與4749新應材各有近10年的資料斷層（代號重複使用）、少數還原權值批次重算造成的單日跳動雜訊。細節見 `analysis/summary.md` 與下方分析報告。
 
+`data/rev_prof_net.csv`：各公司**季**財報資料，欄位為 公司簡稱／名稱／年月／季別／合併(Y/N)／月份／營業收入淨額／營業利益／稅前淨利／合併總損益／TSE產業_名稱，1,937家公司，2005Q2至今，125,604筆。已完成的缺失值/極值檢查：結構完整（無缺失值/重複列），**150檔投資池中有18檔完全沒有資料**（17檔金融/金控業因財報科目結構不同、結構性不涵蓋；3718中光電投控因剛掛牌尚無季報），2005-2007年僅半年報（Q1/Q3無資料，屬監理制度沿革非資料缺陷），另有30檔投資池個股存在申報時間缺口（4749新應材缺口達8年須特別留意）。極值（負營收、營益率暴衝、季對季營收跳動）多屬產業特性（生技/建材營造完工認列等）而非資料錯誤。細節見 `analysis/rev_prof_net_summary.md`。
+
 ## 市場環境分析（`analysis/`）
 
 在進入策略設計前，先對150檔投資池與比賽視窗期（財報季重疊）做的描述性分析，共12張圖，涵蓋：投資池產業/流動性/波動度輪廓、近期市場regime、動能與相關性結構、比賽視窗期(10/26-11/27)季節性效應（財報季分歧度）。
@@ -52,7 +64,7 @@ git clone https://github.com/JunJie-Chang/E.SUN-2026-AI-cup-data.git
 
 ```bash
 pip install pandas numpy matplotlib seaborn
-python3 analysis/eda_market_profile.py
+python3 src/eda_market_profile.py
 ```
 
 會把12張圖存到 `analysis/figures/`，並把對應的關鍵統計數字印到終端機。文字摘要見 `analysis/summary.md`。
@@ -61,3 +73,37 @@ python3 analysis/eda_market_profile.py
 1. 投資池結構性偏科技/半導體（150檔中45檔為半導體業），近1年處於高波動、高報酬分歧的區間。
 2. 比賽視窗期中段（財報密集期 11/10-11/14）個股間報酬分歧會明顯放大，但整體市場方向與成交量沒有異常放大。
 3. 少數股票（短歷史、低流動性、資料斷層）需要在後續建模時個別特殊處理，不能套用同一套規則。
+
+## 財報資料缺失值/極值分析（`analysis/`）
+
+針對新加入的 `data/rev_prof_net.csv`（各公司季營收/營益/稅前淨利）做的資料品質分析，聚焦缺失值與極值兩塊，供後續設計基本面因子前參考。
+
+重跑分析：
+
+```bash
+python3 src/eda_rev_prof_net.py
+```
+
+會把2張圖存到 `analysis/figures/`（13、14），並把對應的關鍵統計數字印到終端機。文字摘要見 `analysis/rev_prof_net_summary.md`。
+
+**三個重點結論**：
+1. 資料結構乾淨（無缺失值/重複列/日期矛盾），真正缺失只有4筆（投控公司成立當季），但**150檔投資池中有18檔完全沒有這份財報資料**（17檔金融業結構性不涵蓋+1檔剛掛牌），用基本面因子時要另外處理。
+2. 2005-2007年僅半年報（Q1/Q3無資料）是全市場監理制度沿革，非本資料集缺陷；另有30檔投資池個股存在申報時間缺口，其中4749新應材缺口達8年最值得留意。
+3. 極值（負營收、營益率暴衝、季對季營收跳動）多屬產業特性（生技/建材營造完工認列造成的正常暴衝）而非資料錯誤，建議對低營收樣本與比率類特徵加篩選/截尾，而非直接當異常值刪除。
+
+## Q3財報公布對股價的影響（`analysis/`）
+
+比賽視窗(10/26-11/27)剛好橫跨台股Q3財報法定申報截止日(季末後45日=11/14)。這裡把 `price_volume.csv` 與 `rev_prof_net.csv` 合併，做一個 event study：市場層級看截止日前後的報酬分歧度/成交量變化，個股層級看「Q3盈餘YoY成長率(盈餘驚奇)」與後續累積報酬的關係。**限制**：資料集沒有每家公司實際申報日期，只能用法定截止日(11/14)當市場層級的近似錨點，非逐檔精確事件研究。
+
+重跑分析：
+
+```bash
+python3 src/eda_q3_earnings_event_study.py
+```
+
+會把2張圖存到 `analysis/figures/`（15、16）。文字摘要見 `analysis/q3_earnings_event_study_summary.md`。
+
+**三個重點結論**：
+1. 用截止日(11/14)當市場層級錨點看，全市場報酬分歧度/成交量在截止日附近只溫和放大(約1.02-1.05倍)，沒有單日劇烈尖峰；成交量在截止日後1-2週有漸進式墊高（約day+12見高點）。
+2. 個股層級上，Q3盈餘YoY成長率(合併總損益)與後續30個交易日累積報酬有清楚正向關係：最佳分位比最差分位在事件窗內多賺約8個百分點（1,968個公司-年觀察值，2008-2025年）。
+3. 但這個價差大部分在截止日**之前**就已形成（推測來自月營收提前反應），截止日**之後**的增量漂移較小且中段分位排序不夠穩健——只有頭尾兩端(最佳/最差)方向性可信賴，且這是18年歷史平均型態，不保證2026年重演。

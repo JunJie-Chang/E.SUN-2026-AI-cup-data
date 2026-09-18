@@ -16,14 +16,17 @@ import matplotlib.dates as mdates
 import seaborn as sns
 
 # ---------------------------------------------------------------- setup ----
-sns.set_theme(style="whitegrid", font="WenQuanYi Zen Hei")
-# sns.set_theme() 會重置部分 rcParams，字型/負號設定要放在它之後才會生效；
-# 加上 DejaVu Sans 當備援字型，避免中文字型缺負號(U+2212)字符時顯示成方框。
-plt.rcParams["font.sans-serif"] = ["WenQuanYi Zen Hei", "DejaVu Sans"]
+sns.set_theme(style="whitegrid")
+# sns.set_theme() 若帶 font= 會直接鎖死 font.family 成單一字型、不會走 fallback；
+# 改成設定 font.sans-serif 清單。WenQuanYi Zen Hei 是原分析機器(Linux)上的字型，
+# 補上 Heiti TC(macOS內建)當備援，避免沒有該字型的環境把中文字元顯示成方框。
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["WenQuanYi Zen Hei", "Heiti TC", "PingFang TC", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
-DATA_PATH = "/home/junjie/e.sun/data/price_volume.csv"
-FIG_DIR = "/home/junjie/e.sun/analysis/figures"
+# 路徑相對於repo根目錄，執行時請從repo根目錄下指令：python3 src/eda_market_profile.py
+DATA_PATH = "data/price_volume.csv"
+FIG_DIR = "analysis/figures"
 
 UNIVERSE = """2330 2454 2308 2317 3711 2881 2383 2303 2882 3037 2891 1303 2345 2382 2408 7769 2412 2327 6669 3017
 2885 2887 2360 2886 2059 6505 2884 2880 2357 2890 2883 3443 3653 2395 2301 6446 4958 2603 5880 1216
