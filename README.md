@@ -8,7 +8,9 @@
 .
 ├── data/
 │   ├── price_volume.csv        # 2000-01-04~至今，台股價量資料（還原權值），619MB，走 Git LFS
-│   └── rev_prof_net.csv        # 2005Q2~至今，各公司季營收/營益/稅前淨利，8.5MB，走 Git LFS
+│   ├── rev_prof_net.csv        # 2005Q2~至今，各公司季營收/營益/稅前淨利，8.5MB，走 Git LFS
+│   ├── money_market_rate.csv   # 2000-01-04~至今，台灣貨幣市場利率（日，市場層級），1.3MB，走 Git LFS
+│   └── chip_distribution.csv   # 2006-07-03~至今，各公司三大法人買賣超/融資融券（日），778MB，走 Git LFS
 ├── rules/
 │   ├── AI CUP 2026玉山人工智慧公開挑戰賽_比賽辦法.pdf   # 完整競賽辦法
 │   └── 玉山挑戰賽_投資組合及交易標的_150檔清單_v1.pdf     # 固定150檔投資池清單（100上市+50上櫃）
@@ -16,24 +18,30 @@
 │   ├── eda_market_profile.py          # 可重跑的市場環境分析腳本（price_volume.csv，seaborn圖表）
 │   ├── eda_rev_prof_net.py            # 可重跑的缺失值/極值分析腳本（rev_prof_net.csv）
 │   ├── eda_q3_earnings_event_study.py # 可重跑的Q3財報公布事件研究腳本（兩資料集合併）
-│   └── eda_fomc_event_study.py        # 可重跑的FOMC利率決策事件研究腳本
+│   ├── eda_fomc_event_study.py        # 可重跑的FOMC利率決策事件研究腳本
+│   ├── eda_money_market_rate.py       # 可重跑的缺失值/極值分析腳本（money_market_rate.csv）
+│   └── eda_chip_distribution.py       # 可重跑的缺失值/極值分析腳本（chip_distribution.csv）
 └── analysis/
-    ├── figures/                       # 分析圖表 PNG（01-12市場環境、13-14財報資料品質、15-16財報事件研究、17 FOMC事件研究）
+    ├── figures/                       # 分析圖表 PNG（01-12市場環境、13-14財報資料品質、15-16財報事件研究、17 FOMC事件研究、18-19利率資料品質、20-21籌碼資料品質）
     ├── run_output.txt                 # eda_market_profile.py 執行輸出
     ├── run_output_rev_prof_net.txt    # eda_rev_prof_net.py 執行輸出
     ├── run_output_q3_event_study.txt  # eda_q3_earnings_event_study.py 執行輸出
     ├── run_output_fomc_event_study.txt # eda_fomc_event_study.py 執行輸出
+    ├── run_output_money_market_rate.txt  # eda_money_market_rate.py 執行輸出
+    ├── run_output_chip_distribution.txt  # eda_chip_distribution.py 執行輸出
     ├── summary.md                     # price_volume.csv 市場環境分析摘要
     ├── rev_prof_net_summary.md        # rev_prof_net.csv 缺失值/極值分析摘要
     ├── q3_earnings_event_study_summary.md  # Q3財報公布對股價影響摘要
-    └── fomc_event_study_summary.md    # FOMC利率決策對股價影響摘要（與Q3財報比較）
+    ├── fomc_event_study_summary.md    # FOMC利率決策對股價影響摘要（與Q3財報比較）
+    ├── money_market_rate_summary.md   # money_market_rate.csv 缺失值/極值分析摘要
+    └── chip_distribution_summary.md   # chip_distribution.csv 缺失值/極值分析摘要
 ```
 
 腳本（`src/`）都是相對於 repo 根目錄讀寫路徑，請從 repo 根目錄執行（例：`python3 src/eda_market_profile.py`），輸出圖表與文字摘要固定寫到 `analysis/`。
 
 ## Clone 這個 repo
 
-`data/` 底下的 CSV（`price_volume.csv`、`rev_prof_net.csv`）都是用 **Git LFS** 追蹤的（`.gitattributes` 設定 `data/*.csv` 一律走 LFS，`price_volume.csv` 原檔619MB超過GitHub單檔100MB上限是主因）。Clone之前務必先裝好 git-lfs，不然拿到的 CSV 會是幾百bytes的指標檔文字，不是真正的資料：
+`data/` 底下的 CSV（`price_volume.csv`、`rev_prof_net.csv`、`money_market_rate.csv`、`chip_distribution.csv`）都是用 **Git LFS** 追蹤的（`.gitattributes` 設定 `data/*.csv` 一律走 LFS，`price_volume.csv`／`chip_distribution.csv` 原檔動輒6-800MB超過GitHub單檔100MB上限是主因）。Clone之前務必先裝好 git-lfs，不然拿到的 CSV 會是幾百bytes的指標檔文字，不是真正的資料：
 
 ```bash
 # 先裝 git-lfs（一次性）
@@ -58,6 +66,10 @@ git clone https://github.com/JunJie-Chang/E.SUN-2026-AI-cup-data.git
 `data/price_volume.csv`：欄位為 公司簡稱／名稱／年月日／開高低收盤價／成交量(千股)／TSE產業_名稱，1,976檔個股（含全部150檔比賽池），2000-01-04至今，還原權值價格。已完成的資料品質檢查：無缺失值/重複值，已知的異常包含少數OHLC微小誤差、3081聯亞與4749新應材各有近10年的資料斷層（代號重複使用）、少數還原權值批次重算造成的單日跳動雜訊。細節見 `analysis/summary.md` 與下方分析報告。
 
 `data/rev_prof_net.csv`：各公司**季**財報資料，欄位為 公司簡稱／名稱／年月／季別／合併(Y/N)／月份／營業收入淨額／營業利益／稅前淨利／合併總損益／TSE產業_名稱，1,937家公司，2005Q2至今，125,604筆。已完成的缺失值/極值檢查：結構完整（無缺失值/重複列），**150檔投資池中有18檔完全沒有資料**（17檔金融/金控業因財報科目結構不同、結構性不涵蓋；3718中光電投控因剛掛牌尚無季報），2005-2007年僅半年報（Q1/Q3無資料，屬監理制度沿革非資料缺陷），另有30檔投資池個股存在申報時間缺口（4749新應材缺口達8年須特別留意）。極值（負營收、營益率暴衝、季對季營收跳動）多屬產業特性（生技/建材營造完工認列等）而非資料錯誤。細節見 `analysis/rev_prof_net_summary.md`。
+
+`data/money_market_rate.csv`：**市場層級**（非個股）日資料，欄位為初級/次級商業本票(CP)、銀行承兌匯票(BA)各天期利率、隔夜拆款利率、一週拆款高低價、拆款成交金額、超額準備、累計準備部位、通貨發行餘額，2000-01-04至今，6,601筆。已完成的缺失值/極值檢查：日期唯一遞增、與 `price_volume.csv` 交易日對齊良好，`-`佔位符極少且可解釋。**找到並修正1筆真正的資料輸入錯誤**：2016/11/18隔夜拆款利率原始值(1.95%)與鄰近日(0.195%)剛好差10倍、且無其他欄位佐證，判定為小數點誤植，已直接修正回0.195%；其餘極值（如2007年半年結流動性緊俏）皆有多欄位互相佐證，屬真實市場現象，予以保留。可作為17檔金融/金控股基本面缺口的總體層級替代因子。細節見 `analysis/money_market_rate_summary.md`。
+
+`data/chip_distribution.csv`：各公司**日**籌碼資料，欄位為三大法人(外資/投信/自營)買賣超張數與成交比重、融資融券增減與餘額、融資融券使用率、券資比、TSE產業_名稱，1,976家公司，2006-07-03至今，7,361,711筆。已完成的缺失值/極值檢查：結構完整（無缺失值/重複列），**150檔投資池全數有資料**（跟rev_prof_net.csv的18檔缺席形成對比，三大法人/融資融券屬交易面資料，17檔金融股同樣正常揭露）。數值欄位的`-`佔位符語意明確（代表當天無融資/融券部位，非缺失），2006-2007年因欄位完整度較低佔比偏高。>100%的比率極值有兩種不同成因（冷門股分母效應 vs 150檔投資池內大型權值股本來基期就高），須分開處理。細節見 `analysis/chip_distribution_summary.md`。
 
 ## 市場環境分析（`analysis/`）
 
@@ -127,3 +139,37 @@ python3 src/eda_fomc_event_study.py
 1. FOMC決策日對「市場整體方向性幅度」(150檔等權重代理指數|報酬|)有明顯放大效果(1.16倍，且day0剛好是±15交易日窗口裡的最高點)，Q3財報截止日則沒有這個效果(0.92倍，甚至略降)。
 2. 反過來，兩者對「個股間分歧度」的放大幅度差不多都很溫和(FOMC 1.03倍 vs 財報1.05倍)——FOMC是系統性總體衝擊，讓大家同時同方向動；財報是個股異質性事件，理論上該拉開分歧但訊號被稀釋。
 3. 分析過程中發現 `price_volume.csv` 已知的還原權值單日跳動雜訊(2014-07-15、2022-02-15)會嚴重扭曲用平均數(mean)算出的event study結果，已改用中位數(median)重新驗證兩份event study。
+
+## 貨幣市場利率資料品質分析（`analysis/`）
+
+針對新加入的 `data/money_market_rate.csv`（台灣貨幣市場各天期利率，市場層級日資料）做的資料品質分析，聚焦缺失值與極值兩塊。這份資料源自「17檔金融股在rev_prof_net.csv完全缺席、需要替代基本面因子」的討論——利率環境是銀行/金控獲利的總體驅動因子，可作為那17檔的總體層級替代因子（搭配個股層級的 `chip_distribution.csv`）。
+
+重跑分析：
+
+```bash
+python3 src/eda_money_market_rate.py
+```
+
+會把2張圖存到 `analysis/figures/`（18、19），並把對應的關鍵統計數字印到終端機。文字摘要見 `analysis/money_market_rate_summary.md`。
+
+**三個重點結論**：
+1. 日期唯一遞增，與 `price_volume.csv` 交易日對齊良好（僅差抓取時間點造成的1天新舊落差），`-`佔位符極少且集中在2000年代早期BA市場清淡期與最新一天盤後數據未結算，可解釋。
+2. 27個利率欄位全數落在0%~10%合理區間，與台灣利率史吻合，僅**2016/11/18這1筆隔夜拆款利率原始值(1.95% vs 鄰近日0.195%，差10倍且無其他欄位佐證)判定為小數點誤植，已直接修正回0.195%**，是這次分析中少數真正的資料錯誤（而非產業/市場特性造成的合理極值）。
+3. 超額準備/累計準備部位可以合理為負（銀行體系低於法定準備要求時的真實狀態），約27%~29%的天數是負值，非資料錯誤。
+
+## 籌碼分佈資料品質分析（`analysis/`）
+
+針對新加入的 `data/chip_distribution.csv`（各公司日三大法人買賣超/融資融券）做的資料品質分析，聚焦缺失值與極值兩塊。這份資料同樣源自「17檔金融股在rev_prof_net.csv完全缺席」的討論，屬於個股層級的交易面資料。
+
+重跑分析：
+
+```bash
+python3 src/eda_chip_distribution.py
+```
+
+會把2張圖存到 `analysis/figures/`（20、21），並把對應的關鍵統計數字印到終端機。文字摘要見 `analysis/chip_distribution_summary.md`。
+
+**三個重點結論**：
+1. 結構乾淨（無缺失值/重複列），且**150檔投資池全數有資料**——跟 `rev_prof_net.csv`（150檔中18檔完全缺席）形成對比，17檔金融股在三大法人/融資融券這類交易面資料上都正常揭露，可補上基本面資料缺口。
+2. 融資融券相關欄位的 `-` 佔位符（0.68%~19.9%不等）語意明確：對應「當天無融資/融券部位」，非缺失；2006-2007兩年因欄位完整度較低，`-`佔比明顯偏高(57%/60%)，其餘年份穩定在15%~22%。
+3. 比率欄位>100%的極值有兩種不同成因：冷門股的「分母效應」(可到8000%+，跟rev_prof_net.csv營益率極端值同邏輯)，以及150檔投資池內大型權值股「本來基期就高(40%~65%)、單日略微超標」——兩者解讀/篩選門檻不能混用同一套。
